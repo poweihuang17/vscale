@@ -29,6 +29,12 @@
 `define CSR_ADDR_TIMEHW    12'h981
 `define CSR_ADDR_INSTRETHW 12'h982
 
+`define CSR_ADDR_DCSR 12'h7b0
+`define CSR_ADDR_DPC 12'7b1
+`define CSR_ADDR_DSCRATCH1 12'7b2
+`define CSR_ADDR_DSCRATCH2 12'7b3
+
+
 `define CSR_ADDR_TO_HOST   12'h780
 `define CSR_ADDR_FROM_HOST 12'h781
 
@@ -61,3 +67,6 @@
 `define PRV_S         1
 `define PRV_H         2
 `define PRV_M         3
+
+//Use another bit to denote debug mode.
+`define PRV_D         1

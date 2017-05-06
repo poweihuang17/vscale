@@ -5,7 +5,7 @@
 
 module vscale_core(
                    input 			   clk,
-		   input [`N_EXT_INTS-1:0] 	   ext_interrupts, 
+		   input [`N_EXT_INTS-1:0] 	   ext_interrupts,
                    output [`HASTI_ADDR_WIDTH-1:0]  imem_haddr,
                    output 			   imem_hwrite,
                    output [`HASTI_SIZE_WIDTH-1:0]  imem_hsize,
@@ -45,6 +45,10 @@ module vscale_core(
                    input 			   htif_ipi_resp_valid,
                    input 			   htif_ipi_resp_data,
                    output 			   htif_debug_stats_pcr
+
+                   //debug spec 0.13
+                   input haltreq;
+                   input resumereq;
                    );
 
    wire                                            imem_wait;
@@ -134,8 +138,11 @@ module vscale_core(
                             .htif_pcr_req_data(htif_pcr_req_data),
                             .htif_pcr_resp_valid(htif_pcr_resp_valid),
                             .htif_pcr_resp_ready(htif_pcr_resp_ready),
-                            .htif_pcr_resp_data(htif_pcr_resp_data)
+                            .htif_pcr_resp_data(htif_pcr_resp_data),
+
+                            //debug spec 0.13
+                            .haltreq(haltreq),
+                            .resumereq(resumereq)
                             );
 
 endmodule // vscale_core
-

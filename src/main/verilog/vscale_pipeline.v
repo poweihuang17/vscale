@@ -7,7 +7,7 @@
 
 module vscale_pipeline(
                        input 			    clk,
-		       input [`N_EXT_INTS-1:0] 	    ext_interrupts, 
+		       input [`N_EXT_INTS-1:0] 	    ext_interrupts,
                        input 			    reset,
                        input 			    imem_wait,
                        output [`XPR_LEN-1:0] 	    imem_addr,
@@ -30,6 +30,10 @@ module vscale_pipeline(
                        output 			    htif_pcr_resp_valid,
                        input 			    htif_pcr_resp_ready,
                        output [`HTIF_PCR_WIDTH-1:0] htif_pcr_resp_data
+
+                       //debug spec 0.13
+                       input haltreq;
+                       input resumereq;
                        );
 
    function [`XPR_LEN-1:0] store_data;
@@ -186,7 +190,10 @@ module vscale_pipeline(
 		    .interrupt_pending(interrupt_pending),
 		    .interrupt_taken(interrupt_taken),
                     .prv(prv),
-                    .eret(eret)
+                    .eret(eret),
+
+                    //debug spec 0.13
+                    .haltreq(haltreq)
                     );
 
 
@@ -228,10 +235,40 @@ module vscale_pipeline(
    assign rs1_addr = inst_DX[19:15];
    assign rs2_addr = inst_DX[24:20];
 
+
+   //Debug 0.13 extension
+   //Add mux in front of regfile so that debug module could read and write the register file
+   //when the core is halt.
+   //Only add 1 mux in front of read1. Read2 port doesn't have mux.
+
+   wire debug_read;
+   wire [`REG_ADDR_WIDTH-1:0] debug_raddr;
+   wire [`XPR_LEN-1:0] debug_rd;
+
+   wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr;
+   wire [`XPR_LEN-1:0] rs1_or_debug_data;
+
+   rs1_or_debug_addr = debug_read? debug_raddr: rs1_addr;
+   rs1_or_debug_data = debug_read? debug_rdata: rs1_data;
+
+   wire debug_write;
+   wire [`REG_ADDR_WIDTH-1:0] debug_waddr;
+   wire [`REG_ADDR_WIDTH-1:0] debug_wdata;
+
+   wire wb_or_debug_wen;
+   wire [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr;
+   wire [`XPR_LEN-1:0] wb_or_debug_data;
+
+   wb_or_debug_wen= debug_write? debug_write : wr_reg_WB;
+   wb_or_debug_addr= debug_write? debug_waddr: reg_to_wr_WB;
+   wb_or_debug_data= debug_write? debug_wdata: wb_data_WB;
+   //
+
    vscale_regfile regfile(
                           .clk(clk),
-                          .ra1(rs1_addr),
-                          .rd1(rs1_data),
+                          .ra1(rs1_or_debug_addr),
+                          .rd1(rs1_or_debug_data),
+
                           .ra2(rs2_addr),
                           .rd2(rs2_data),
                           .wen(wr_reg_WB),

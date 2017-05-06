@@ -50,6 +50,9 @@ module vscale_ctrl(
                    output wire                        exception_WB,
                    output wire [`ECODE_WIDTH-1:0]     exception_code_WB,
                    output wire                        retire_WB
+
+                   //debug spec 0.13
+                   input haltreq;
                    );
 
    // IF stage ctrl pipeline registers
@@ -99,7 +102,7 @@ module vscale_ctrl(
    reg 						      wfi_unkilled_DX;
    wire 					      wfi_DX;
    reg [`CSR_CMD_WIDTH-1:0]                           csr_cmd_unkilled;
-   
+
    // WB stage ctrl pipeline registers
    reg                                                wr_reg_unkilled_WB;
    reg                                                had_ex_WB;
@@ -109,7 +112,7 @@ module vscale_ctrl(
    reg                                                prev_killed_WB;
    reg                                                uses_md_WB;
    reg 						      wfi_unkilled_WB;
-   
+
    // WB stage ctrl signals
    wire                                               ex_WB;
    reg [`ECODE_WIDTH-1:0]                             ex_code_WB;
@@ -118,7 +121,7 @@ module vscale_ctrl(
    wire                                               killed_WB;
    wire                                               load_in_WB;
    wire 					      active_wfi_WB;
-   
+
    // Hazard signals
    wire                                               load_use;
    reg                                                uses_rs1;
@@ -457,11 +460,11 @@ module vscale_ctrl(
 
    // WFI handling
    // can't be killed while in WB stage
-   assign active_wfi_WB = !prev_killed_WB && wfi_unkilled_WB 
+   assign active_wfi_WB = !prev_killed_WB && wfi_unkilled_WB
 			  && !(interrupt_taken || interrupt_pending);
 
    assign kill_WB = stall_WB || ex_WB;
-   assign stall_WB = ((dmem_wait && dmem_en_WB) || (uses_md_WB && !md_resp_valid) || active_wfi_WB) && !exception;
+   assign stall_WB = (((dmem_wait && dmem_en_WB) || (uses_md_WB && !md_resp_valid) || active_wfi_WB) && !exception) || haltreq;
    assign dmem_access_exception = dmem_badmem_e;
    assign ex_WB = had_ex_WB || dmem_access_exception;
    assign killed_WB = prev_killed_WB || kill_WB;

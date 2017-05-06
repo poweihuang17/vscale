@@ -5,7 +5,7 @@
 
 module vscale_csr_file(
                        input 			    clk,
-		       input [`N_EXT_INTS-1:0] 	    ext_interrupts, 
+		       input [`N_EXT_INTS-1:0] 	    ext_interrupts,
                        input 			    reset,
                        input [`CSR_ADDR_WIDTH-1:0]  addr,
                        input [`CSR_CMD_WIDTH-1:0]   cmd,
@@ -58,6 +58,12 @@ module vscale_csr_file(
    reg [`ECODE_WIDTH-1:0]                           mecode;
    reg                                              mint;
    reg [`XPR_LEN-1:0]                               mbadaddr;
+
+   //Debug spec 0.13
+   reg [`XPR_LEN-1:0]                               dcsr;
+   reg [`XPR_LEN-1:0]                               dpc;
+   reg [`XPR_LEN-1:0]                               dscratch1;
+   reg [`XPR_LEN-1:0]                               dscratch2;
 
    wire                                             ie;
 
@@ -288,6 +294,13 @@ module vscale_csr_file(
         `CSR_ADDR_CYCLEHW   : begin rdata = cycle_full[`XPR_LEN+:`XPR_LEN]; defined = 1'b1; end
         `CSR_ADDR_TIMEHW    : begin rdata = time_full[`XPR_LEN+:`XPR_LEN]; defined = 1'b1; end
         `CSR_ADDR_INSTRETHW : begin rdata = instret_full[`XPR_LEN+:`XPR_LEN]; defined = 1'b1; end
+
+        //Debug spec 0.13
+        `CSR_ADDR_DCSR      : begin rdata = dcsr; defined=1'b1; end
+        `CSR_ADDR_DPC       : begin rdata = dpc; defined=1'b1; end
+        `CSR_ADDR_DSCRATCH1 : begin rdata = dscratch1; defined=1'b1 end
+        `CSR_ADDR_DSCRATCH2 : begin rdata = dscratch2; defined=1'b1 end
+
         // non-standard
         `CSR_ADDR_TO_HOST : begin rdata = to_host; defined = 1'b1; end
         `CSR_ADDR_FROM_HOST : begin rdata = from_host; defined = 1'b1; end
@@ -344,6 +357,13 @@ module vscale_csr_file(
               `CSR_ADDR_INSTRETHW : instret_full[`XPR_LEN+:`XPR_LEN] <= wdata_internal;
               `CSR_ADDR_TO_HOST   : to_host <= wdata_internal;
               `CSR_ADDR_FROM_HOST : from_host <= wdata_internal;
+
+              //Debug spec 0.13
+              `CSR_ADDR_DCSR      : dcsr <= wdata_internal;
+              `CSR_ADDR_DPC       : dpc  <= wdata_internal;
+              `CSR_ADDR_DSCRATCH1 : dscratch1 <= wdata_internal;
+              `CSR_ADDR_DSCRATCH2 : dscratch2 <= wdata_internal;
+
               default : ;
             endcase // case (addr)
          end // if (wen_internal)

@@ -1,3 +1,9 @@
+/* Comment added by Po-wei Huang
+This is a a regfile with 2 port read and 1 port write.
+It has no read enable but has write enable.
+No reset.
+*/
+
 `include "rv32_opcodes.vh"
 
 module vscale_regfile(
@@ -26,6 +32,7 @@ module vscale_regfile(
       end
    end
 
+//What's this?
 `ifndef SYNTHESIS
    integer i;
    initial begin
