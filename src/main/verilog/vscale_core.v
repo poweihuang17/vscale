@@ -48,13 +48,14 @@ module vscale_core(
 
                    //debug spec 0.13
                    input haltreq;
+                   output core_haltack;
                    input resumereq;
+                   output core_resumeack;
 
                    input [12:0] register_index,
                    input debug_write,
                    input debug_read,
-                   input [`REG_ADDR_WIDTH-1:0] debug_addr,
-                   input [`REG_ADDR_WIDTH-1:0] debug_wdata,
+                   input [`XPR_LEN-1:0] debug_wdata,
                    output [`XPR_LEN-1:0]       debug_rdata
                    );
 
@@ -153,7 +154,6 @@ module vscale_core(
                             .register_index(register_index),
                             .debug_write(debug_write),
                             .debug_read(debug_read),
-                            .debug_addr(debug_addr),
                             .debug_wdata(debug_wdata),
                             .debug_rdata(debug_rdata)
                             );

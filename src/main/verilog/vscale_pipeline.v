@@ -39,8 +39,7 @@ module vscale_pipeline(
                        input [12:0] register_index;
                        input debug_write;
                        input debug_read;
-                       input [`REG_ADDR_WIDTH-1:0] debug_addr,
-                       input [`REG_ADDR_WIDTH-1:0] debug_wdata,
+                       input [`XPR_LEN-1:0]        debug_wdata,
                        output [`XPR_LEN-1:0]       debug_rdata
 
                        );
