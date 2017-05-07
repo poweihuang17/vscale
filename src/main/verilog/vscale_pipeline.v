@@ -32,8 +32,17 @@ module vscale_pipeline(
                        output [`HTIF_PCR_WIDTH-1:0] htif_pcr_resp_data
 
                        //debug spec 0.13
+                       //Halt control
                        input haltreq;
                        input resumereq;
+
+                       input [12:0] register_index;
+                       input debug_write;
+                       input debug_read;
+                       input [`REG_ADDR_WIDTH-1:0] debug_addr,
+                       input [`REG_ADDR_WIDTH-1:0] debug_wdata,
+                       output [`XPR_LEN-1:0]       debug_rdata,
+
                        );
 
    function [`XPR_LEN-1:0] store_data;
@@ -241,39 +250,43 @@ module vscale_pipeline(
    //when the core is halt.
    //Only add 1 mux in front of read1. Read2 port doesn't have mux.
 
-   wire debug_read;
-   wire [`REG_ADDR_WIDTH-1:0] debug_raddr;
-   wire [`XPR_LEN-1:0] debug_rd;
+   wire debug_read_gpr;
+   wire [`REG_ADDR_WIDTH-1:0] debug_raddr_gpr;
+   wire [`XPR_LEN-1:0] debug_rdata_gpr;
 
-   wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr;
-   wire [`XPR_LEN-1:0] rs1_or_debug_data;
+   wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr_gpr;
+   wire [`XPR_LEN-1:0] rs1_or_debug_data_gpr;
 
-   rs1_or_debug_addr = debug_read? debug_raddr: rs1_addr;
-   rs1_or_debug_data = debug_read? debug_rdata: rs1_data;
+   rs1_or_debug_addr_gpr = debug_read_gpr? debug_raddr_gpr: rs1_addr_gpr;
+   rs1_or_debug_data_gpr = debug_read_gpr? debug_rdata_gpr: rs1_data_gpr;
 
-   wire debug_write;
-   wire [`REG_ADDR_WIDTH-1:0] debug_waddr;
-   wire [`REG_ADDR_WIDTH-1:0] debug_wdata;
+   debug_read_gpr = register_index[12]? debug_read : 1'b0;
 
-   wire wb_or_debug_wen;
-   wire [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr;
-   wire [`XPR_LEN-1:0] wb_or_debug_data;
+   wire debug_write_gpr;
+   wire [`REG_ADDR_WIDTH-1:0] debug_waddr_gpr;
+   wire [`REG_ADDR_WIDTH-1:0] debug_wdata_gpr;
 
-   wb_or_debug_wen= debug_write? debug_write : wr_reg_WB;
-   wb_or_debug_addr= debug_write? debug_waddr: reg_to_wr_WB;
-   wb_or_debug_data= debug_write? debug_wdata: wb_data_WB;
+   wire wb_or_debug_wen_gpr;
+   wire [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr_gpr;
+   wire [`XPR_LEN-1:0] wb_or_debug_data_gpr;
+
+   wb_or_debug_wen_gpr = debug_write_gpr? debug_write_gpr : wr_reg_WB;
+   wb_or_debug_addr_gpr = debug_write_gpr? debug_waddr_gpr: reg_to_wr_WB;
+   wb_or_debug_data_gpr = debug_write_gpr? debug_wdata_gpr: wb_data_WB;
+
+   debug_write_gpr = register_index[12]? debug_write : 1'b0;
    //
 
    vscale_regfile regfile(
                           .clk(clk),
-                          .ra1(rs1_or_debug_addr),
-                          .rd1(rs1_or_debug_data),
+                          .ra1(rs1_or_debug_addr_gpr),
+                          .rd1(rs1_or_debug_data_gpr),
 
                           .ra2(rs2_addr),
                           .rd2(rs2_data),
-                          .wen(wr_reg_WB),
-                          .wa(reg_to_wr_WB),
-                          .wd(wb_data_WB)
+                          .wen(wb_or_debug_wen_gpr),
+                          .wa(wb_or_debug_addr_gpr),
+                          .wd(wb_or_debug_data_gpr)
                           );
 
    vscale_imm_gen imm_gen(
@@ -373,11 +386,28 @@ module vscale_pipeline(
    assign csr_addr = inst_DX[31:20];
    assign csr_wdata = (csr_imm_sel) ? inst_DX[19:15] : rs1_data_bypassed;
 
+   //Debug 0.13 extension
+   wire debug_write_csr;
+   wire debug_read_csr;
+   wire [`REG_ADDR_WIDTH-1:0] csr_addr_final;
+   wire [`XPR_LEN-1:0] csr_wdata_final;
+   wire [`XPR_LEN-1:0] csr_rdata_final;
+
+   debug_write_csr = register_index[12]? 1'b0 : debug_write;
+   debug_read_csr = register_index [12]? 1'b0 : debug_read;
+   csr_addr_final= (debug_write_csr || debug_read_csr) ? register_index[11:0]: csr_addr;
+   csr_wdata_final= (debug_write_csr)? debug_wdata : csr_wdata;
+   debug_rdata= register_index[12]? rs1_data : csr_rdata;
+
+   wire [`CSR_CMD_WIDTH-1:0]                    csr_cmd_final;
+   
+   //
+
    vscale_csr_file csr(
                        .clk(clk),
-		       .ext_interrupts(ext_interrupts),
+		                   .ext_interrupts(ext_interrupts),
                        .reset(reset),
-                       .addr(csr_addr),
+                       .addr(csr_addr_final),
                        .cmd(csr_cmd),
                        .wdata(csr_wdata),
                        .prv(prv),
@@ -391,8 +421,8 @@ module vscale_pipeline(
                        .epc(epc),
                        .eret(eret),
                        .handler_PC(handler_PC),
-		       .interrupt_pending(interrupt_pending),
-		       .interrupt_taken(interrupt_taken),
+		                   .interrupt_pending(interrupt_pending),
+		                   .interrupt_taken(interrupt_taken),
                        .htif_reset(htif_reset),
                        .htif_pcr_req_valid(htif_pcr_req_valid),
                        .htif_pcr_req_ready(htif_pcr_req_ready),
