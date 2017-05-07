@@ -41,7 +41,7 @@ module vscale_pipeline(
                        input debug_read;
                        input [`REG_ADDR_WIDTH-1:0] debug_addr,
                        input [`REG_ADDR_WIDTH-1:0] debug_wdata,
-                       output [`XPR_LEN-1:0]       debug_rdata,
+                       output [`XPR_LEN-1:0]       debug_rdata
 
                        );
 
@@ -255,10 +255,10 @@ module vscale_pipeline(
    wire [`XPR_LEN-1:0] debug_rdata_gpr;
 
    wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr_gpr;
-   wire [`XPR_LEN-1:0] rs1_or_debug_data_gpr;
+
 
    rs1_or_debug_addr_gpr = debug_read_gpr? debug_raddr_gpr: rs1_addr_gpr;
-   rs1_or_debug_data_gpr = debug_read_gpr? debug_rdata_gpr: rs1_data_gpr;
+
 
    debug_read_gpr = register_index[12]? debug_read : 1'b0;
 
@@ -280,7 +280,7 @@ module vscale_pipeline(
    vscale_regfile regfile(
                           .clk(clk),
                           .ra1(rs1_or_debug_addr_gpr),
-                          .rd1(rs1_or_debug_data_gpr),
+                          .rd1(rs1_data),
 
                           .ra2(rs2_addr),
                           .rd2(rs2_data),
@@ -400,7 +400,7 @@ module vscale_pipeline(
    debug_rdata= register_index[12]? rs1_data : csr_rdata;
 
    wire [`CSR_CMD_WIDTH-1:0]                    csr_cmd_final;
-   
+   assign csr_cmd_final= (debug_write_csr)? `CSR_WRITE : (debug_read_csr? `CSR_READ : `CSR_IDLE);
    //
 
    vscale_csr_file csr(
@@ -408,8 +408,8 @@ module vscale_pipeline(
 		                   .ext_interrupts(ext_interrupts),
                        .reset(reset),
                        .addr(csr_addr_final),
-                       .cmd(csr_cmd),
-                       .wdata(csr_wdata),
+                       .cmd(csr_cmd_final),
+                       .wdata(csr_wdata_final),
                        .prv(prv),
                        .illegal_access(illegal_csr_access),
                        .rdata(csr_rdata),
