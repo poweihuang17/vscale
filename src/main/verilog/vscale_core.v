@@ -150,7 +150,10 @@ module vscale_core(
 
                             //debug spec 0.13
                             .haltreq(haltreq),
+                            .haltack(core_haltack),
                             .resumereq(resumereq),
+                            .resumeack(core_resumeack),
+
                             .register_index(register_index),
                             .debug_write(debug_write),
                             .debug_read(debug_read),

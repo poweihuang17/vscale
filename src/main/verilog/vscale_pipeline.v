@@ -34,7 +34,9 @@ module vscale_pipeline(
                        //debug spec 0.13
                        //Halt control
                        input haltreq;
+                       output haltack;
                        input resumereq;
+                       output resumeack;
 
                        input [12:0] register_index;
                        input debug_write;
@@ -201,7 +203,10 @@ module vscale_pipeline(
                     .eret(eret),
 
                     //debug spec 0.13
-                    .haltreq(haltreq)
+                    .haltreq(haltreq),
+                    .haltack(haltack),
+                    .resumereq(resumereq),
+                    .resumeack(resumeack)
                     );
 
 

@@ -53,7 +53,29 @@ module vscale_ctrl(
 
                    //debug spec 0.13
                    input haltreq;
+                   output haltack;
+                   input resumereq;
+                   output resumeack;
                    );
+
+
+   // debug v0.13 extension
+   // halt/resume state machine
+   reg halted;
+   wire halted_next;
+   always@(posedge clk)
+    begin
+    if(reset)
+      halted<=1'b0;
+    else
+      halted<=halted_next;
+    end
+
+    halted_next= halted? (resumereq? 1'b0 : 1'b1 ): (haltreq? 1'b1 1'b0);
+    assign haltack=halted
+    assign resumeack=!halted
+
+
 
    // IF stage ctrl pipeline registers
    reg                                                replay_IF;
