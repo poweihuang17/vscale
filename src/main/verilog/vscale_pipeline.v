@@ -44,6 +44,8 @@ module vscale_pipeline(
                        input [`XPR_LEN-1:0]        debug_wdata,
                        output [`XPR_LEN-1:0]       debug_rdata
 
+                       output reg_rack;
+                       output reg_wack;
                        );
 
    function [`XPR_LEN-1:0] store_data;
@@ -258,10 +260,10 @@ module vscale_pipeline(
    wire [`REG_ADDR_WIDTH-1:0] debug_raddr_gpr;
    wire [`XPR_LEN-1:0] debug_rdata_gpr;
 
-   wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr_gpr;
+   reg [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr_gpr;
+   wire [`REG_ADDR_WIDTH-1:0] rs1_or_debug_addr_gpr_next;
 
 
-   rs1_or_debug_addr_gpr = debug_read_gpr? debug_raddr_gpr: rs1_addr_gpr;
 
 
    debug_read_gpr = register_index[12]? debug_read : 1'b0;
@@ -270,15 +272,75 @@ module vscale_pipeline(
    wire [`REG_ADDR_WIDTH-1:0] debug_waddr_gpr;
    wire [`REG_ADDR_WIDTH-1:0] debug_wdata_gpr;
 
-   wire wb_or_debug_wen_gpr;
-   wire [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr_gpr;
-   wire [`XPR_LEN-1:0] wb_or_debug_data_gpr;
+   wire wb_or_debug_wen_gpr_next;
+   wire [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr_gpr_next;
+   wire [`XPR_LEN-1:0] wb_or_debug_data_gpr_next;
 
-   wb_or_debug_wen_gpr = debug_write_gpr? debug_write_gpr : wr_reg_WB;
-   wb_or_debug_addr_gpr = debug_write_gpr? debug_waddr_gpr: reg_to_wr_WB;
-   wb_or_debug_data_gpr = debug_write_gpr? debug_wdata_gpr: wb_data_WB;
+   reg wb_or_debug_wen_gpr;
+   reg [`REG_ADDR_WIDTH-1:0] wb_or_debug_addr_gpr;
+   reg [`XPR_LEN-1:0] wb_or_debug_data_gpr;
+
+
 
    debug_write_gpr = register_index[12]? debug_write : 1'b0;
+
+   rs1_or_debug_addr_gpr_next= debug_read_gpr? debug_raddr_gpr: rs1_addr_gpr;
+   wb_or_debug_wen_gpr_next = debug_write_gpr? debug_write_gpr : wr_reg_WB;
+   wb_or_debug_addr_gpr_next = debug_write_gpr? debug_waddr_gpr: reg_to_wr_WB;
+   wb_or_debug_data_gpr_next = debug_write_gpr? debug_wdata_gpr: wb_data_WB;
+
+   always@(posedge clk)
+    begin
+    if(reset)
+      begin
+      rs1_or_debug_addr_gpr <=`REG_ADDR_WIDTH'd0;
+      wb_or_debug_wen_gpr <= 1'b0;
+      wb_or_debug_addr_gpr <= `REG_ADDR_WIDTH'd0;
+      wb_or_debug_data_gpr <= `XPR_LEN'd0;
+      end
+    else
+      begin
+      rs1_or_debug_addr_gpr <=rs1_or_debug_addr_gpr_next;
+      wb_or_debug_wen_gpr <= wb_or_debug_wen_gpr_next;
+      wb_or_debug_addr_gpr <= wb_or_debug_addr_gpr_next;
+      wb_or_debug_data_gpr <= wb_or_debug_data_gpr_next;
+      end
+    end
+
+   reg [2:0] reg_rw_state;
+   wire [2:0] reg_rw_state_next;
+   always@(*)
+    begin
+    reg_rw_state_next=reg_rw_state;
+
+    case(reg_rw_state)
+      //IDLE
+      3'd0:
+        begin
+        if(debug_read)
+          begin
+          reg_rw_state_next=3'd2;
+          end
+        else if(debug_write)
+          begin
+          reg_rw_state_next=3'd3;
+          end
+        end
+      //Read Done:
+      3'd2:
+        reg_rw_state_next=3'd0;
+      //Write the register
+      3'd3:
+        reg_rw_state_next=3'd4;
+      //Write Done
+      3'd4:
+        reg_rw_state_next=3'd0;
+      default:
+        reg_rw_state_next=reg_rw_state;
+    endcase
+    end
+   reg_wack=(reg_rw_state==3'd4)? 1'b1 : 1'b0;
+   reg_rack=(reg_rw_state==3'd2)? 1'b1: 1'b0;
    //
 
    vscale_regfile regfile(

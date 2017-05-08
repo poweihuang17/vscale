@@ -56,7 +56,10 @@ module vscale_core(
                    input debug_write,
                    input debug_read,
                    input [`XPR_LEN-1:0] debug_wdata,
-                   output [`XPR_LEN-1:0]       debug_rdata
+                   output [`XPR_LEN-1:0]       debug_rdata,
+
+                   output reg_rack;
+                   output reg_wack;
                    );
 
    wire                                            imem_wait;
@@ -158,7 +161,10 @@ module vscale_core(
                             .debug_write(debug_write),
                             .debug_read(debug_read),
                             .debug_wdata(debug_wdata),
-                            .debug_rdata(debug_rdata)
+                            .debug_rdata(debug_rdata),
+
+                            .reg_rack(reg_rack),
+                            .reg_wack(reg_wack)
                             );
 
 endmodule // vscale_core

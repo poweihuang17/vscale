@@ -486,7 +486,7 @@ module vscale_ctrl(
 			  && !(interrupt_taken || interrupt_pending);
 
    assign kill_WB = stall_WB || ex_WB;
-   assign stall_WB = (((dmem_wait && dmem_en_WB) || (uses_md_WB && !md_resp_valid) || active_wfi_WB) && !exception) || haltreq;
+   assign stall_WB = (((dmem_wait && dmem_en_WB) || (uses_md_WB && !md_resp_valid) || active_wfi_WB) && !exception) || halted;
    assign dmem_access_exception = dmem_badmem_e;
    assign ex_WB = had_ex_WB || dmem_access_exception;
    assign killed_WB = prev_killed_WB || kill_WB;
